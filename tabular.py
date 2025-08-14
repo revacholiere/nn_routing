@@ -158,7 +158,7 @@ def hyperparameter_search(
             lr = params.get('lr', 1e-3)
             model_params = params.copy()
             model_params.pop('lr', None)
-            avg_loss, train_hist, val_hist = cross_validate_torch_model(
+            model, avg_loss, train_hist, val_hist = cross_validate_torch_model(
                 model_class,
                 X,
                 y,
@@ -240,8 +240,8 @@ def plot_loss_histories(train_loss_histories, val_loss_histories):
 
 param_grid = {
     'lr': [1e-2, 1e-3],
-    'num_layers': [1, 2],
-    'hidden_dim': [64, 128, 256]
+    'num_layers': [1, 2, 3],
+    'hidden_dim': [64, 128, 256, 512]
 }
 '''
 print("Baseline")
@@ -414,7 +414,7 @@ def plot_test_losses(all_test_losses, seed):
     plt.savefig(f"test_losses_{seed}.png")
 
 
-#compare_models([BaselineMLP, ShallowModel, DeepModel], [baseline_params, ours_params, ours_params], seed=42, num_runs=5)
+#compare_models([BaselineMLP, ShallowModel, DeepModel], [baseline_params, ours_params, ours_params], seed=42, num_runs=3)
 
 def tune_models(model_class_list, param_grid, seed, num_runs):
     all_best_params = {}
@@ -429,7 +429,7 @@ def tune_models(model_class_list, param_grid, seed, num_runs):
             param_grid,
             n_splits=5,
             epochs=200,
-            batch_size=128,
+            batch_size=8192,
             device='cpu',
             early_stopping=True,
             patience=10,
