@@ -123,7 +123,7 @@ def cross_validate_torch_model(
         train_loss_history.append(fold_train_losses)
         val_loss_history.append(fold_val_losses)
         #print(f"Fold {fold} val_loss: {val_loss:.4f}")
-    return np.mean(losses), train_loss_history, val_loss_history
+    return model, np.mean(losses), train_loss_history, val_loss_history
 def hyperparameter_search(
     model_class,
     X,
@@ -364,7 +364,7 @@ def compare_models(model_class_list, param_list, seed, num_runs):
         test_losses = []
         for run in range(num_runs):
             run_seed = seed + run
-            avg_val_loss, train_history, val_history = cross_validate_torch_model(
+            model, avg_val_loss, train_history, val_history = cross_validate_torch_model(
                 model,
                 X_train,
                 y_train,
