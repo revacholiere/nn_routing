@@ -419,9 +419,9 @@ def compare_models(model_class_list, param_list, seed, num_runs):
         all_val_histories[model.__name__] = val_histories
         all_test_losses[model.__name__] = test_losses
     plot_loss_histories(all_train_histories, all_val_histories)
-    plot_test_losses(all_test_losses)
+    plot_test_losses(all_test_losses, seed)
 
-def plot_test_losses(all_test_losses):
+def plot_test_losses(all_test_losses, seed):
     import matplotlib.pyplot as plt
     model_names = list(all_test_losses.keys())
     means = [np.mean(all_test_losses[m]) for m in model_names]
@@ -432,6 +432,8 @@ def plot_test_losses(all_test_losses):
     plt.title("Average Test Loss per Model")
     plt.grid(axis='y')
     plt.show()
+    # save plot
+    plt.savefig(f"test_losses_{seed}.png")
 
 
 #compare_models([BaselineMLP, ShallowModel, DeepModel], [baseline_params, ours_params, ours_params], seed=42, num_runs=5)
