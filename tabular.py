@@ -348,13 +348,12 @@ ours_best_val_loss, ours_train_history, ours_val_history = cross_validate_torch_
 )
 '''
 
-
 def compare_models(model_class_list, param_list, seed, num_runs):
     all_train_histories = {}
     all_val_histories = {}
     all_test_losses = {}
-    for model, params in zip(model_class_list, param_list):
-        print(f"Training {model.__name__} with params: {params}")
+    for model_class, params in zip(model_class_list, param_list):
+        print(f"Training {model_class.__name__} with params: {params}")
         lr = params['lr']
         model_params = params.copy()
         model_params.pop('lr')
@@ -364,8 +363,9 @@ def compare_models(model_class_list, param_list, seed, num_runs):
         test_losses = []
         for run in range(num_runs):
             run_seed = seed + run
-            model, avg_val_loss, train_history, val_history = cross_validate_torch_model(
-                model,
+            # Train and validate
+            trained_model, avg_val_loss, train_history, val_history = cross_validate_torch_model(
+                model_class,
                 X_train,
                 y_train,
                 n_splits=5,
@@ -381,43 +381,21 @@ def compare_models(model_class_list, param_list, seed, num_runs):
             )
             train_histories.extend(train_history)
             val_histories.extend(val_history)
-            # Train final model on all train data for test evaluation
-            torch.manual_seed(run_seed)
-            np.random.seed(run_seed)
-            random.seed(run_seed)
-            if torch.cuda.is_available():
-                torch.cuda.manual_seed_all(run_seed)
-            model_instance = model(input_dim=X_train.shape[1], output_dim=len(np.unique(y)), **model_params).to(device)
-            optimizer = torch.optim.Adam(model_instance.parameters(), lr=lr)
-            criterion = torch.nn.CrossEntropyLoss()
-            X_train_tensor = torch.tensor(X_train, dtype=torch.float32).to(device)
-            y_train_tensor = torch.tensor(y_train-1, dtype=torch.long).to(device)
+            # Evaluate on test set using the last trained model
             X_test_tensor = torch.tensor(X_test, dtype=torch.float32).to(device)
             y_test_tensor = torch.tensor(y_test-1, dtype=torch.long).to(device)
-            for epoch in range(epochs):
-                model_instance.train()
-                permutation = torch.randperm(X_train_tensor.size(0))
-                for i in range(0, X_train_tensor.size(0), 128):
-                    indices = permutation[i:i+128]
-                    batch_x = X_train_tensor[indices]
-                    batch_y = y_train_tensor[indices]
-                    optimizer.zero_grad()
-                    outputs = model_instance(batch_x)
-                    loss = criterion(outputs, batch_y)
-                    loss.backward()
-                    optimizer.step()
-            model_instance.eval()
+            trained_model.eval()
             with torch.no_grad():
-                test_outputs = model_instance(X_test_tensor)
+                test_outputs = trained_model(X_test_tensor)
                 test_loss = log_loss(
                     y_test_tensor.cpu().numpy(),
                     test_outputs.softmax(dim=1).cpu().numpy()
                 )
             test_losses.append(test_loss)
             print(f"Run {run+1}/{num_runs} - Avg val loss: {avg_val_loss:.4f} - Test loss: {test_loss:.4f}")
-        all_train_histories[model.__name__] = train_histories
-        all_val_histories[model.__name__] = val_histories
-        all_test_losses[model.__name__] = test_losses
+        all_train_histories[model_class.__name__] = train_histories
+        all_val_histories[model_class.__name__] = val_histories
+        all_test_losses[model_class.__name__] = test_losses
     plot_loss_histories(all_train_histories, all_val_histories)
     plot_test_losses(all_test_losses, seed)
 
